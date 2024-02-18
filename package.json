@@ -1,5 +1,5 @@
 {
-	"name": "commercejs-demo",
+	"name": "sk-ecommerce-demo",
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
@@ -20,7 +20,6 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"@chec/commerce.js": "^2.8.0",
-		"@types/chec__commerce.js": "^2.8.11"
+		"square": "^34.0.1"
 	}
 }

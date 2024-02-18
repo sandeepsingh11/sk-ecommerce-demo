@@ -7,13 +7,13 @@
     <div>
         <hgroup>
             <h3>{ product.name }</h3>
-            <p>{ product.description }</p>
+            <p>{ product.desc }</p>
         </hgroup>
-        <p>{ product.displayPrice }</p>
-        {#if product.image}
-            <img src="{ product.image.url }" alt="{ product.image.alt }">
+        <p>${ (product.displayPrice) ? product.displayPrice.toFixed(2) : '0.00' }</p>
+        {#if product.images}
+            <img src="{ product.images[0].url }" alt="{ product.images[0].name }">
         {/if}
-        <a href="/products/{ product.url }" style="display: block;">View product</a>
+        <a href="/products/{ product.slug }" style="display: block;">View product</a>
     </div>
 
     {/each}

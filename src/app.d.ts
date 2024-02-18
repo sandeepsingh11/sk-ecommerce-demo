@@ -7,8 +7,7 @@ declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
-			cartId: string;
-			cart: Cart
+			cart: string;
 		}
 		// interface PageData {}
 		// interface PageState {}

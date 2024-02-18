@@ -1,109 +1,144 @@
-import { commercejs } from '$lib/commercejs';
 import { writable } from 'svelte/store';
+import { cartCookieName, getCookieByName, writeCookie } from '$lib/cookies';
 import type { product } from './products';
 
 type lineItem = {
-    id: string;
-    name: string;
-    price: number;
-    quantity: number;
+    id: string,
+    productId: string,
+    name: string,
+    desc: string,
+    imageUrl?: string,
+    variation: {
+        id: string,
+        name: string,
+        price: number,
+    },
+    mods?: Array<{
+        id: string,
+        name: string,
+        price: number,
+    }>,
+    quantity: number,
+    total: number
 }
 
-type cart = {
-    cartId: string;
+export type cart = {
     lineItems: lineItem[];
     subtotal: number;
 }
 
-function createCart() {
-    const cart = writable<cart>(
-        {
-            cartId: '',
-            lineItems: Array(),
-            subtotal: 0
+function createCart() {    
+    const store = writable<cart>({
+        lineItems: [],
+        subtotal: 0
+    });
+
+    // set the cart store data
+    function set() {
+        let cartData = getCookieByName(cartCookieName);
+        
+        // if cart cookie does not exist, create it
+        if (!cartData) {
+            const defaultCart = {lineItems: [], subtotal: 0};
+            
+            writeCookie(cartCookieName, defaultCart);
+
+            // get newly created cart cookie
+            cartData = getCookieByName(cartCookieName);
         }
-    );
 
-    async function set(cartId: string) {
-        await commercejs.cart.retrieve(cartId)
-            .then((data) => {
-                cart.update((cart) => {
-                    cart.subtotal = 0;
-                    data.line_items.forEach((item) => {
-                        cart.lineItems.push({ 
-                            id: item.id, 
-                            name: item.name, 
-                            quantity: item.quantity, 
-                            price: Number(item.price.formatted)
-                        })    
-
-                        cart.subtotal += Number(item.price.formatted) * item.quantity;
-                    });
-
-                    cart.cartId = cartId;
-
-                    return cart;
-                });
-            });
+        if (cartData) {
+            // set cart cookie data to cart store
+            store.update((store) => {
+                store.lineItems = cartData.lineItems;
+                store.subtotal = cartData.subtotal;
+                
+                return store;
+            })
+        }
     }
 
-    async function addItem(product: product, quantity: number) {
+    async function addItem(
+        product: product, 
+        formData: {
+            id: string, 
+            quantity: number, 
+            variation: {id: string, name: string, price: number},
+            mods: {id: string, name: string, price: number}[]
+        }
+    ) {
+        const total = (formData.variation.price * formData.quantity) + formData.mods.reduce((acc, mod) => acc + mod.price, 0);
+
         const item: lineItem = {
-            id: product.id,
+            id: formData.id,
+            productId: product.id,
             name: product.name,
-            price: product.price,
-            quantity: quantity
+            desc: product.desc,
+            imageUrl: product.images?.at(0)?.url,
+            variation: formData.variation,
+            mods: formData.mods,
+            quantity: formData.quantity,
+            total: total
         };
 
-        // add to local cart
-        cart.update((cart) => {
-            cart.lineItems.push(item)
+        // set cart store in case it didnt run before (race condition)
+        set();
 
-            return cart;
-        });
-
-        // add to cookie
-        await commercejs.cart.add(product.id, quantity);
-    }
-
-    async function updateQuantity(itemId: string, quantity: number) {
-        https://dev.to/jdgamble555/the-unwritten-svelte-stores-guide-47la
-        
-        console.log(quantity);
-        
         // update local cart
-        cart.update((cart) => {
-            // handle if 0
-            if (quantity == 0) {
-                console.log('q = 0');
-                
-                const index = cart.lineItems.findIndex(item => item.id === itemId);
-                cart.lineItems.splice(index, 1);
-                console.log(cart.lineItems);
-                
-            }
+        store.update((store) => {
+            store.lineItems.push(item);
+            store.subtotal += item.total;
 
-            cart.subtotal = 0;
-            cart.lineItems.forEach(item => {
-                if (item.id === itemId) {
-                    item.quantity = quantity;
-                }
-
-                cart.subtotal += item.quantity * item.price;
-            });
+            // add to cart cookie
+            writeCookie(cartCookieName, {lineItems: store.lineItems, subtotal: store.subtotal});
             
-            return cart;
+            return store;
         });
-
-        // update cookie
-        await commercejs.cart.update(itemId, { quantity: quantity })
     }
+
+    // async function updateQuantity(itemId: string, quantity: number) {
+    //     https://dev.to/jdgamble555/the-unwritten-svelte-stores-guide-47la
+        
+    //     console.log(quantity);
+        
+    //     // update local cart
+    //     cart.update((cart) => {
+    //         // handle if 0
+    //         if (quantity == 0) {
+    //             console.log('q = 0');
+                
+    //             const index = cart.lineItems.findIndex(item => item.id === itemId);
+    //             cart.lineItems.splice(index, 1);
+    //             console.log(cart.lineItems);
+                
+    //         }
+
+    //         cart.subtotal = 0;
+    //         cart.lineItems.forEach(item => {
+    //             if (item.id === itemId) {
+    //                 item.quantity = quantity;
+    //             }
+
+    //             cart.subtotal += item.quantity * item.price;
+    //         });
+            
+    //         return cart;
+    //     });
+
+    //     // update cookie
+    //     await commercejs.cart.update(itemId, { quantity: quantity })
+    // }
 
     return {
-        ...cart,
+        ...store,
+        get value() {
+            let value: any;
+            this.subscribe((v) => (value = v))();
+            return value;
+        },
         set,
         addItem,
-        updateQuantity,
+        // updateQuantity,
         // increment: () => update((n) => n + 1),
         // decrement: () => update((n) => n - 1),
         // reset: () => set(0)

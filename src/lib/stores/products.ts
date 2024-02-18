@@ -1,72 +1,71 @@
-import { commercejs } from "$lib/commercejs";
+import { mapProducts } from "$lib/square";
 import { writable } from "svelte/store";
 
 export type product = {
     id: string,
     name: string,
-    description: string,
-    price: number,
-    displayPrice: string,
-    url: string,
-    image?: {
+    slug: string,
+    desc: string,
+    images?: Array<{
+        id: string,
+        name: string,
         url: string,
-        alt: string,
-    }
-}
+    }>,
+    variations: Array<{
+        id: string,
+        name: string,
+        price: number,
+    }>,
+    mods: Array<{
+        id: string,
+        name: string,
+        price: number,
+    }>,
+    displayPrice: number
+};
 
 async function createProducts() {
-    const products = writable<product[]>([]);
-    let _products: product[] = [];
+    const store = writable<product[]>([]);
+    let products: product[] = []; // so I dont need to call update() to access the products
 
-    await commercejs.products.list()
-        .then(({data}) => {
-            products.update((products) => {
-                // map each cjs product to local store objects
-                data.forEach(product => {
-                    let image;
-                    if (product.image) {
-                        image = {
-                            url: product.image.url,
-                            alt: product.image.description || product.image.filename
-                        }
-                    }
-
+    await mapProducts()
+        .then((mappedProducts) => {
+            store.update((store) => {
+                mappedProducts.forEach((p, i) => {
+                    // add to local products
                     products.push({
-                        id: product.id,
-                        name: product.name,
-                        description: product.description,
-                        price: Number(product.price.formatted),
-                        displayPrice: product.price.formatted_with_symbol,
-                        url: product.permalink,
-                        image: image
-                    })
+                        id: p.id,
+                        name: p.name,
+                        slug: p.slug,
+                        desc: p.desc,
+                        images: p.images,
+                        variations: p.variations,
+                        mods: p.mods,
+                        displayPrice: p.displayPrice
+                    });
 
-                    _products.push({
-                        id: product.id,
-                        name: product.name,
-                        description: product.description,
-                        price: Number(product.price.formatted),
-                        displayPrice: product.price.formatted_with_symbol,
-                        url: product.permalink,
-                        image: image
-                    })
-                })
-        
-                return products;
-            })
+                    // add to products store
+                    store.push(products[i]);
+                });
+
+                return store;
+            });
         });
 
     function getProduct(productSlug: string) {
         let product: product | undefined;
-        _products.forEach(p => {
-            if (p.url === productSlug) product = p;
-        });
+        for(let p of products) {
+            if (p.slug === productSlug) {
+                product = p;
+                break;
+            }
+        };
 
         return product;
     }
 
     return {
-        ...products,
+        ...store,
         getProduct
     };
 }
