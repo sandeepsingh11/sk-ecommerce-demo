@@ -96,7 +96,7 @@ function createCart() {
         });
     }
 
-    async function updateQuantity(lineItemId: string, quantity: number) {
+    function updateQuantity(lineItemId: string, quantity: number) {
         https://dev.to/jdgamble555/the-unwritten-svelte-stores-guide-47la
         
         // update local cart
@@ -134,11 +134,28 @@ function createCart() {
         });
     }
 
+    function removeLineItem(lineItemId: string) {
+        store.update((store) => {
+            store.lineItems.forEach((lineItem, i) => {
+                if (lineItem.id === lineItemId) {
+                    store.subtotal -= lineItem.total;
+                    store.lineItems.splice(i, 1);
+
+                    // add to cart cookie
+                    writeCookie(cartCookieName, {lineItems: store.lineItems, subtotal: store.subtotal});
+                }
+            })
+
+            return store;
+        })
+    }
+
     return {
         ...store,
         set,
         addItem,
         updateQuantity,
+        removeLineItem,
         // increment: () => update((n) => n + 1),
         // decrement: () => update((n) => n - 1),
         // reset: () => set(0)
