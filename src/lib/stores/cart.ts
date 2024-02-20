@@ -96,49 +96,49 @@ function createCart() {
         });
     }
 
-    // async function updateQuantity(itemId: string, quantity: number) {
-    //     https://dev.to/jdgamble555/the-unwritten-svelte-stores-guide-47la
+    async function updateQuantity(lineItemId: string, quantity: number) {
+        https://dev.to/jdgamble555/the-unwritten-svelte-stores-guide-47la
         
-    //     console.log(quantity);
-        
-    //     // update local cart
-    //     cart.update((cart) => {
-    //         // handle if 0
-    //         if (quantity == 0) {
-    //             console.log('q = 0');
+        // update local cart
+        store.update((store) => {
+            // // handle if 0
+            // if (quantity == 0) {
+            //     console.log('q = 0');
                 
-    //             const index = cart.lineItems.findIndex(item => item.id === itemId);
-    //             cart.lineItems.splice(index, 1);
-    //             console.log(cart.lineItems);
+            //     const index = cart.lineItems.findIndex(item => item.id === lineItemId);
+            //     cart.lineItems.splice(index, 1);
+            //     console.log(cart.lineItems);
                 
-    //         }
+            // }
 
-    //         cart.subtotal = 0;
-    //         cart.lineItems.forEach(item => {
-    //             if (item.id === itemId) {
-    //                 item.quantity = quantity;
-    //             }
+            store.subtotal = 0;
+            store.lineItems.forEach(lineItem => {
+                if (lineItem.id === lineItemId) {
+                    lineItem.quantity = quantity;
 
-    //             cart.subtotal += item.quantity * item.price;
-    //         });
+                    let total = lineItem.variation.price * lineItem.quantity;
+                    if (lineItem.mods) {
+                        total += lineItem.mods.reduce((acc, mod) => acc + mod.price, 0);
+                    }
+
+                    lineItem.total = total;
+                }
+
+                store.subtotal += lineItem.total;
+            });
             
-    //         return cart;
-    //     });
+            // add to cart cookie
+            writeCookie(cartCookieName, {lineItems: store.lineItems, subtotal: store.subtotal});
 
-    //     // update cookie
-    //     await commercejs.cart.update(itemId, { quantity: quantity })
-    // }
+            return store;
+        });
+    }
 
     return {
         ...store,
-        get value() {
-            let value: any;
-            this.subscribe((v) => (value = v))();
-            return value;
-        },
         set,
         addItem,
-        // updateQuantity,
+        updateQuantity,
         // increment: () => update((n) => n + 1),
         // decrement: () => update((n) => n - 1),
         // reset: () => set(0)

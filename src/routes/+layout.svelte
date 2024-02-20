@@ -11,14 +11,14 @@
 
     /**
      * @param {Event} e
-     * @param {string} itemId
+     * @param {string} lineItemId
      */
-    async function updateCart(e, itemId) {
-        // // @ts-ignore
-        // const quantity = e.target?.value;
-        // if (quantity) {
-        //     cart.updateQuantity(itemId, quantity)
-        // }
+    async function updateCart(e, lineItemId) {
+        // @ts-ignore
+        const quantity = e.target?.value;
+        if (quantity) {
+            cart.updateQuantity(lineItemId, quantity)
+        }
     }
 </script>
 
@@ -45,7 +45,7 @@
                     name="quantity" 
                     id="quantity-{item.id}" 
                     value="{ item.quantity }" 
-                    min="0"
+                    min="1"
                     on:input={(e) => updateCart(e, item.id)}
                 >
             </div>
