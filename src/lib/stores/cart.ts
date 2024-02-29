@@ -1,6 +1,8 @@
 import { writable } from 'svelte/store';
-import { cartCookieName, getCookieByName, writeCookie } from '$lib/cookies';
+import { cartCookieName, getCookieByName, orderCookieName, writeCookie } from '$lib/cookies';
 import type { product } from './products';
+import { browser } from '$app/environment';
+import { error } from '@sveltejs/kit';
 
 type lineItem = {
     id: string,
@@ -27,11 +29,15 @@ export type cart = {
     subtotal: number;
 }
 
-function createCart() {    
+function createCart() {
     const store = writable<cart>({
         lineItems: [],
         subtotal: 0
     });
+
+    if (browser) {
+        set();
+    }
 
     // set the cart store data
     function set() {
@@ -101,16 +107,6 @@ function createCart() {
         
         // update local cart
         store.update((store) => {
-            // // handle if 0
-            // if (quantity == 0) {
-            //     console.log('q = 0');
-                
-            //     const index = cart.lineItems.findIndex(item => item.id === lineItemId);
-            //     cart.lineItems.splice(index, 1);
-            //     console.log(cart.lineItems);
-                
-            // }
-
             store.subtotal = 0;
             store.lineItems.forEach(lineItem => {
                 if (lineItem.id === lineItemId) {
@@ -150,12 +146,62 @@ function createCart() {
         })
     }
 
+    async function getHostedCheckout() {
+        let cart: cart = {
+            lineItems: [],
+            subtotal: 0
+        };
+
+        store.update((store) => {
+            cart = store;
+            return store;
+        });
+
+        const checkoutResponse = await fetch('/api/checkout', {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+                cart
+            })
+        });
+
+        const res = await checkoutResponse.json();
+
+        if (checkoutResponse.ok) {    
+            // store Square Order data into cookie
+            writeCookie(orderCookieName, res.relatedResources.orders[0].id);
+    
+            // redirect to Square checkout page
+            window.location = res.paymentLink.longUrl;
+        }
+        else {
+            throw error(500, 'Error: ' + res.message);
+        }
+    }
+
+    function isEmpty() {
+        let empty = false;
+
+        store.update((store) => {
+            if (store.lineItems.length === 0) empty = true;
+            else empty = false;
+
+            return store;
+        });
+
+        return empty;
+    }
+
     return {
         ...store,
         set,
         addItem,
         updateQuantity,
         removeLineItem,
+        isEmpty,
+        getHostedCheckout,
         // increment: () => update((n) => n + 1),
         // decrement: () => update((n) => n - 1),
         // reset: () => set(0)

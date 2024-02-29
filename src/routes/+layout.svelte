@@ -41,26 +41,30 @@
 
 <div>
     Cart:
-    <div class="grid">
-        {#each $cart.lineItems as lineItem}
-            <div>
-                <button type="button" on:click={() => removeLineItem(lineItem.id)}>X</button>
-                <div>Product: { lineItem.name }</div>
-                <div>Quantity: { lineItem.quantity }</div>
-                <div>Price: ${ lineItem.total }</div>
-                <input 
-                    type="number" 
-                    name="quantity" 
-                    id="quantity-{lineItem.id}" 
-                    value="{ lineItem.quantity }" 
-                    min="1"
-                    on:input={(e) => updateCart(e, lineItem.id)}
-                >
-            </div>
-        {/each}
+    {#if $cart.lineItems.length > 0}
+        <div class="grid">
+            {#each $cart.lineItems as lineItem}
+                <div>
+                    <button type="button" on:click={() => removeLineItem(lineItem.id)}>X</button>
+                    <div>Product: { lineItem.name }</div>
+                    <div>Quantity: { lineItem.quantity }</div>
+                    <div>Price: ${ lineItem.total }</div>
+                    <input 
+                        type="number" 
+                        name="quantity" 
+                        id="quantity-{lineItem.id}" 
+                        value="{ lineItem.quantity }" 
+                        min="1"
+                        on:input={(e) => updateCart(e, lineItem.id)}
+                    >
+                </div>
+            {/each}
 
-        <div>Subtotal: ${$cart.subtotal}</div>
-    </div>
+            <div>Subtotal: ${$cart.subtotal}</div>
+        </div>
+        
+        <a href="/checkout" role="button">Checkout</a>
+    {/if}
 </div>
 
 <slot />
